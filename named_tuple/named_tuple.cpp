@@ -140,6 +140,10 @@ struct Any
                     os << e;
                 }
             }
+            else if constexpr (requires { os << std::any_cast<std::decay_t<T const&>>(a); })
+            {
+                os << std::any_cast<std::decay_t<T const&>>(a);
+            }
             else
             {
                 os << a.type().name();
@@ -190,7 +194,7 @@ struct NamedTuple
     }
 
     constexpr explicit(true) NamedTuple(auto&&... ts)
-        : Ts(std::forward<decltype(ts)>(ts))...
+        : Ts{ std::forward<decltype(ts)>(ts) }...
     {
 
     }
@@ -264,8 +268,7 @@ struct NamedTuple
     auto const& get() const
     {
         auto id_type{ [] <auto... Ns>(std::index_sequence<Ns...>) {
-            return Inherit<
-                std::pair<std::integral_constant<std::size_t, Ns>, Ts>...>{};
+            return Inherit<std::pair<std::integral_constant<std::size_t, Ns>, Ts>...>{};
         }(std::make_index_sequence<sizeof...(Ts)>{}) };
 
         using T = typename decltype(Internal::MapLookup<void, std::integral_constant<std::size_t, N>, std::pair>(&id_type))::second_type;
@@ -512,6 +515,10 @@ int main()
 
         employees.emplace_back("John", 22, "Software Engineer");
         employees.emplace_back("Michael", 36, "Senior Software Engineer");
+
+        auto age{ 100 };
+
+        employees[0].Assign("age"_t = age);
 
         auto const to_json{ [](std::ostream& os, auto const& vs) {
             os << "[{\n";
